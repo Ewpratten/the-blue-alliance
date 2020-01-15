@@ -1,10 +1,11 @@
+# TODO: Kill notification helper in favor of TBANS
+
 import datetime
 import json
 
 from consts.client_type import ClientType
 from consts.notification_type import NotificationType
 
-from helpers.tbans_helper import TBANSHelper
 from helpers.push_helper import PushHelper
 
 from models.event import Event
@@ -12,7 +13,6 @@ from models.sitevar import Sitevar
 
 from notifications.alliance_selections import AllianceSelectionNotification
 from notifications.level_starting import CompLevelStartingNotification
-from notifications.broadcast import BroadcastNotification
 from notifications.match_score import MatchScoreNotification
 from notifications.match_video import MatchVideoNotification, EventMatchVideoNotification
 from notifications.awards_updated import AwardsUpdatedNotification
@@ -20,7 +20,6 @@ from notifications.schedule_updated import ScheduleUpdatedNotification
 from notifications.upcoming_match import UpcomingMatchNotification
 from notifications.update_favorites import UpdateFavoritesNotification
 from notifications.update_subscriptions import UpdateSubscriptionsNotification
-from notifications.ping import PingNotification
 
 
 class NotificationHelper(object):
@@ -40,14 +39,14 @@ class NotificationHelper(object):
 
     @classmethod
     def send_favorite_update(cls, user_id, sending_device_key=""):
-        clients = PushHelper.get_client_ids_for_users([user_id])
+        clients = PushHelper.get_client_ids_for_users([user_id], os_types=[ClientType.OS_ANDROID])
 
         notification = UpdateFavoritesNotification(user_id, sending_device_key)
         notification.send(clients)
 
     @classmethod
     def send_subscription_update(cls, user_id, sending_device_key=""):
-        clients = PushHelper.get_client_ids_for_users([user_id])
+        clients = PushHelper.get_client_ids_for_users([user_id], os_types=[ClientType.OS_ANDROID])
 
         notification = UpdateSubscriptionsNotification(user_id, sending_device_key)
         notification.send(clients)
@@ -144,20 +143,3 @@ class NotificationHelper(object):
         else:
             user_keys = PushHelper.get_client_ids_for_users(users)
             EventMatchVideoNotification(match).send(user_keys)
-
-    @classmethod
-    def send_broadcast(cls, client_types, title, message, url, app_version=''):
-        users = PushHelper.get_all_mobile_clients(client_types)
-        keys = PushHelper.get_client_ids_for_users(users)
-
-        notification = BroadcastNotification(title, message, url, app_version)
-        notification.send(keys)
-
-    @classmethod
-    def send_ping(cls, client):
-        if client.client_type == ClientType.OS_ANDROID:
-            notification = PingNotification()
-            notification.send({client.client_type: [client.messaging_id]})
-        else:
-            # Send iOS/web/webhooks ping via TBANS
-            return TBANSHelper.ping(client)
